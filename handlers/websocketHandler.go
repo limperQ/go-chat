@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"bytes"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -54,16 +52,4 @@ func WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-}
-
-func EncodeToBytes(p interface{}) []byte {
-
-	buf := bytes.Buffer{}
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(p)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("uncompressed size (bytes): ", len(buf.Bytes()))
-	return buf.Bytes()
 }
