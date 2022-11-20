@@ -1,6 +1,10 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"shev-chat/structs"
@@ -26,12 +30,13 @@ func WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Client connected:", ws.RemoteAddr().String())
 
-	var socketClient *structs.ConnectUser = structs.NewConnectedUser(ws, ws.RemoteAddr().String())
+	var userInfo structs.UserInfo
+	var socketClient *structs.ConnectUser = structs.NewConnectedUser(ws, ws.RemoteAddr().String(), userInfo)
 	users[*socketClient] = 0
 	log.Println("Number client connected ...", len(users))
 
 	for {
-		messageType, message, err := ws.ReadMessage()
+		_, message, err := ws.ReadMessage()
 		if err != nil {
 			log.Println("Ws disconnected waiting", err.Error())
 			delete(users, *socketClient)
@@ -40,9 +45,25 @@ func WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for client := range users {
-			if err = client.Websocket.WriteMessage(messageType, message); err != nil {
+			if unmarshalErr := json.Unmarshal(message, &userInfo); unmarshalErr != nil {
+				fmt.Println("Something went wrong with json.Unmarshal(message)")
+			}
+
+			if err = client.Websocket.WriteJSON(userInfo); err != nil {
 				log.Println("Cloud not send Message to ", client.ClientIP, err.Error())
 			}
 		}
 	}
+}
+
+func EncodeToBytes(p interface{}) []byte {
+
+	buf := bytes.Buffer{}
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(p)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("uncompressed size (bytes): ", len(buf.Bytes()))
+	return buf.Bytes()
 }
